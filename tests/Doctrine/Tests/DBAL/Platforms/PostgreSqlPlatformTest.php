@@ -336,19 +336,19 @@ class PostgreSqlPlatformTest extends AbstractPlatformTestCase
             $this->assertEquals($expected, $actual);
         }
     }
-    
+
     public function testAlterDecimalPrecisionScale()
     {
-        
+
         $table = new Table('mytable');
         $table->addColumn('dfoo1', 'decimal');
         $table->addColumn('dfoo2', 'decimal', array('precision' => 10, 'scale' => 6));
         $table->addColumn('dfoo3', 'decimal', array('precision' => 10, 'scale' => 6));
         $table->addColumn('dfoo4', 'decimal', array('precision' => 10, 'scale' => 6));
-        
+
         $tableDiff = new TableDiff('mytable');
         $tableDiff->fromTable = $table;
-        
+
         $tableDiff->changedColumns['dloo1'] = new \Doctrine\DBAL\Schema\ColumnDiff(
             'dloo1', new \Doctrine\DBAL\Schema\Column(
                 'dloo1', \Doctrine\DBAL\Types\Type::getType('decimal'), array('precision' => 16, 'scale' => 6)
@@ -373,13 +373,53 @@ class PostgreSqlPlatformTest extends AbstractPlatformTestCase
             ),
             array('precision', 'scale')
         );
-        
+
         $sql = $this->_platform->getAlterTableSQL($tableDiff);
-                
+
         $expectedSql = array(
             'ALTER TABLE mytable ALTER dloo1 TYPE NUMERIC(16, 6)',
             'ALTER TABLE mytable ALTER dloo2 TYPE NUMERIC(10, 4)',
             'ALTER TABLE mytable ALTER dloo4 TYPE NUMERIC(16, 8)',
+        );
+
+        $this->assertEquals($expectedSql, $sql);
+    }
+
+    public function testAlterDefaultValue()
+    {
+        $table = new Table('mytable');
+        $table->addColumn('foo', 'string');
+        $table->addColumn('bar', 'string', array('default' => 'bardef1'));
+        $table->addColumn('baz', 'string', array('default' => 'bazdef1'));
+
+        $tableDiff = new TableDiff('mytable');
+        $tableDiff->fromTable = $table;
+
+        $tableDiff->changedColumns['foo'] = new \Doctrine\DBAL\Schema\ColumnDiff(
+            'foo', new \Doctrine\DBAL\Schema\Column(
+                'foo', \Doctrine\DBAL\Types\Type::getType('string'), array('default' => 'foodef1')
+            ),
+            array('default')
+        );
+        $tableDiff->changedColumns['bar'] = new \Doctrine\DBAL\Schema\ColumnDiff(
+            'bar', new \Doctrine\DBAL\Schema\Column(
+                'bar', \Doctrine\DBAL\Types\Type::getType('string'), array('default' => 'bardef2')
+            ),
+            array('default')
+        );
+        $tableDiff->changedColumns['baz'] = new \Doctrine\DBAL\Schema\ColumnDiff(
+            'baz', new \Doctrine\DBAL\Schema\Column(
+                'baz', \Doctrine\DBAL\Types\Type::getType('string')
+            ),
+            array('default')
+        );
+
+        $sql = $this->_platform->getAlterTableSQL($tableDiff);
+
+        $expectedSql = array(
+            "ALTER TABLE mytable ALTER foo SET  DEFAULT 'foodef1'",
+            "ALTER TABLE mytable ALTER bar SET  DEFAULT 'bardef2'",
+            'ALTER TABLE mytable ALTER baz DROP DEFAULT',
         );
 
         $this->assertEquals($expectedSql, $sql);
